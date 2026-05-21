@@ -1,41 +1,27 @@
 <?php 
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-
 include 'koneksi.php'; 
 
-// ==========================================
-// LOGIKA PAGINATION & PENCARIAN
-// ==========================================
-$limit = 25; // Kita tampilkan 25 data per halaman biar ringan
-$halaman = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
+$limit        = 25;
+$halaman      = isset($_GET['halaman']) ? (int)$_GET['halaman'] : 1;
 $halaman_awal = ($halaman > 1) ? ($halaman * $limit) - $limit : 0;
+$cari         = isset($_GET['cari'])   ? $_GET['cari']   : '';
+$filter_jenis = isset($_GET['jenis'])  ? $_GET['jenis']  : '';
 
-$cari = isset($_GET['cari']) ? $_GET['cari'] : '';
-$kondisi_cari = "";
+$kondisi = [];
+if ($cari != '') $kondisi[] = "(influencers LIKE '%$cari%' OR judul_berita LIKE '%$cari%')";
+if ($filter_jenis != '') $kondisi[] = "jenis_media = '$filter_jenis'";
+$kondisi_cari = count($kondisi) > 0 ? "WHERE " . implode(" AND ", $kondisi) : "";
 
-// Kalau ada yang diketik di kotak pencarian, tambahkan rumus ini
-if ($cari != '') {
-    // Cari berdasarkan nama influencer ATAU judul berita
-    $kondisi_cari = "WHERE influencers LIKE '%$cari%' OR judul_berita LIKE '%$cari%'";
-}
-
-// 1. Hitung total data untuk bikin tombol angka halamannya
-$query_total = mysqli_query($koneksi, "SELECT COUNT(*) AS total FROM laporan $kondisi_cari");
-$data_total = mysqli_fetch_assoc($query_total);
-$total_data = $data_total['total'];
+$query_total   = mysqli_query($koneksi, "SELECT COUNT(*) AS total FROM laporan $kondisi_cari");
+$total_data    = mysqli_fetch_assoc($query_total)['total'];
 $total_halaman = ceil($total_data / $limit);
-
-// 2. Tarik data sesuai halaman yang sedang dibuka
-$query = mysqli_query($koneksi, "SELECT * FROM laporan $kondisi_cari ORDER BY id DESC LIMIT $halaman_awal, $limit");
-
-// Bikin nomor urutnya nyambung ke halaman berikutnya
-$no = $halaman_awal + 1;
-// ==========================================
+$query         = mysqli_query($koneksi, "SELECT * FROM laporan $kondisi_cari ORDER BY id DESC LIMIT $halaman_awal, $limit");
+$no            = $halaman_awal + 1;
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,38 +29,53 @@ $no = $halaman_awal + 1;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-<style>
-    body { background-color: #f0f4f8; font-family: 'Poppins', sans-serif; }
-    .sidebar { background: linear-gradient(180deg, #1a3d4a 0%, #112933 100%); min-height: 100vh; width: 250px; color: white; position: fixed; box-shadow: 4px 0 15px rgba(0,0,0,0.05); }
-    .main-content { margin-left: 250px; width: calc(100% - 250px); }
-    .nav-link { color: #aeb9be; font-weight: 500; padding: 12px 20px; transition: all 0.3s ease; }
-    .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-radius: 8px; }
-    .header-blue { background: linear-gradient(90deg, #4384b6 0%, #2b6088 100%); color: white; padding: 15px 20px; font-weight: 600; border-radius: 16px 16px 0 0; }
-    .table { background-color: white; border-radius: 10px; }
-    .table thead th { background-color: #f8fafc; color: #475569; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
-    :target { animation: highlight 2s ease-out; }
-    @keyframes highlight { 0% { background-color: #fff3cd; } 100% { background-color: transparent; } }
-</style>
+    <style>
+        body { background-color: #f0f4f8; font-family: 'Poppins', sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1a3d4a 0%, #112933 100%); min-height: 100vh; width: 250px; color: white; position: fixed; box-shadow: 4px 0 15px rgba(0,0,0,0.05); }
+        .main-content { margin-left: 250px; width: calc(100% - 250px); }
+        .nav-link { color: #aeb9be; font-weight: 500; padding: 12px 20px; transition: all 0.3s ease; }
+        .nav-link:hover, .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .header-blue { background: linear-gradient(90deg, #4384b6 0%, #2b6088 100%); color: white; padding: 15px 20px; font-weight: 600; border-radius: 16px 16px 0 0; }
+        .table { background-color: white; border-radius: 10px; }
+        .table thead th { background-color: #f8fafc; color: #475569; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+        .badge-online { background: #dbeafe; color: #1e40af; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .badge-cetak  { background: #fef9c3; color: #854d0e; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+        .btn-jenis { padding: 5px 16px; border-radius: 20px; font-size: 12px; font-family: 'Poppins', sans-serif; font-weight: 500; border: 1.5px solid #dee2e6; background: white; color: #6c757d; text-decoration: none; transition: all 0.2s; }
+        .btn-jenis:hover { background: #f0f4f8; color: #1a3d4a; }
+        .btn-jenis.active { background: #1a3d4a; color: white; border-color: #1a3d4a; }
+        .section-cetak { display: none; }
+        .section-cetak.show { display: block; }
+        :target { animation: highlight 2s ease-out; }
+        @keyframes highlight { 0% { background-color: #fff3cd; } 100% { background-color: transparent; } }
+    </style>
 </head>
 <body>
-
 <div class="d-flex">
     <div class="sidebar p-3">
         <h3 class="fw-bold mb-4 mt-2 px-2">SIPANDITA</h3>
         <ul class="nav flex-column gap-2">
-            <li class="nav-item"><a href="index.php" class="nav-link"><i class="bi bi-house-door me-2"></i> Dashboard Analis</a></li>
-            <li class="nav-item"><a href="laporan_staf.php" class="nav-link active"><i class="bi bi-file-earmark-text me-2"></i> Laporan Staf</a></li>
+            <li class="nav-item"><a href="index.php" class="nav-link rounded"><i class="bi bi-house-door me-2"></i> Dashboard Analis</a></li>
+            <li class="nav-item"><a href="laporan_staf.php" class="nav-link active rounded"><i class="bi bi-file-earmark-text me-2"></i> Laporan Staf</a></li>
         </ul>
     </div>
-
     <div class="main-content">
         <div class="bg-white p-3 border-bottom d-flex justify-content-between align-items-center">
             <h5 class="m-0 fw-bold text-uppercase">Laporan Staf</h5>
             <div class="d-flex align-items-center"><span>Hi, Umar</span><i class="bi bi-person-circle fs-4 ms-2"></i></div>
         </div>
-
         <div class="container-fluid p-4">
+            <?php if(isset($_GET['pesan']) && $_GET['pesan'] == 'berhasil'): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i> Laporan berhasil disimpan!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php elseif(isset($_GET['pesan']) && $_GET['pesan'] == 'update_sukses'): ?>
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i> Laporan berhasil diupdate!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
             <div class="card shadow-sm border-0" style="border-radius: 16px;">
                 <div class="header-blue d-flex justify-content-between align-items-center">
                     <span>Daftar Laporan Masuk</span>
@@ -82,16 +83,23 @@ $no = $halaman_awal + 1;
                         <i class="bi bi-plus-lg"></i> Tambah Laporan
                     </button>
                 </div>
-                
-                <div class="bg-light p-3 border-bottom d-flex justify-content-between align-items-center">
-                    <span class="text-muted small fw-bold">Total: <?php echo number_format($total_data, 0, ',', '.'); ?> Data</span>
+
+                <div class="bg-light p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-muted small fw-bold">Total: <?php echo number_format($total_data, 0, ',', '.'); ?> Data</span>
+                        <span class="text-muted">|</span>
+                        <a href="laporan_staf.php?<?php echo $cari ? 'cari='.$cari.'&' : ''; ?>jenis=" class="btn-jenis <?php echo $filter_jenis == '' ? 'active' : ''; ?>">Semua</a>
+                        <a href="laporan_staf.php?<?php echo $cari ? 'cari='.$cari.'&' : ''; ?>jenis=online" class="btn-jenis <?php echo $filter_jenis == 'online' ? 'active' : ''; ?>"><i class="bi bi-globe2 me-1"></i> Online</a>
+                        <a href="laporan_staf.php?<?php echo $cari ? 'cari='.$cari.'&' : ''; ?>jenis=cetak" class="btn-jenis <?php echo $filter_jenis == 'cetak' ? 'active' : ''; ?>"><i class="bi bi-newspaper me-1"></i> Cetak</a>
+                    </div>
                     <form action="laporan_staf.php" method="GET" class="d-flex" style="width: 350px;">
+                        <?php if($filter_jenis != '') echo '<input type="hidden" name="jenis" value="'.$filter_jenis.'">'; ?>
                         <div class="input-group input-group-sm shadow-sm">
                             <input type="text" name="cari" class="form-control border-0" placeholder="Cari nama staf atau judul laporan..." value="<?php echo htmlspecialchars($cari); ?>">
                             <button type="submit" class="btn btn-primary px-3"><i class="bi bi-search"></i> Cari</button>
-                            <?php if($cari != '') { ?>
-                                <a href="laporan_staf.php" class="btn btn-danger"><i class="bi bi-x-lg"></i></a>
-                            <?php } ?>
+                            <?php if($cari != ''): ?>
+                                <a href="laporan_staf.php<?php echo $filter_jenis ? '?jenis='.$filter_jenis : ''; ?>" class="btn btn-danger"><i class="bi bi-x-lg"></i></a>
+                            <?php endif; ?>
                         </div>
                     </form>
                 </div>
@@ -101,27 +109,44 @@ $no = $halaman_awal + 1;
                         <thead>
                             <tr class="text-center">
                                 <th width="5%">No</th>
-                                <th width="12%">Tanggal</th>
-                                <th width="15%">Nama Staf</th>
+                                <th width="10%">Tanggal</th>
+                                <th width="13%">Nama Staf</th>
                                 <th class="text-start">Judul Laporan</th>
-                                <th width="12%">Status</th>
-                                <th width="12%">Aksi</th>
+                                <th width="8%">Jenis</th>
+                                <?php if($filter_jenis == 'cetak'): ?>
+                                <th width="8%">Halaman</th>
+                                <th width="10%">Bulan</th>
+                                <?php endif; ?>
+                                <th width="10%">Status</th>
+                                <th width="10%">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
-                        <?php 
-                        if(mysqli_num_rows($query) > 0) {
-                            while($data = mysqli_fetch_array($query)) { ?>
+                        <?php if (mysqli_num_rows($query) > 0):
+                            while ($data = mysqli_fetch_array($query)):
+                                $jenis_row = !empty($data['jenis_media']) ? $data['jenis_media'] : 'online';
+                        ?>
                             <tr id="baris-<?php echo $data['id']; ?>">
                                 <td class="text-center fw-bold text-muted"><?php echo $no++; ?></td>
-                                <td class="text-center" style="font-size: 0.85rem;"><?php echo date('d M Y', strtotime($data['tanggal'])); ?></td>
-                                <td class="text-center text-muted fw-medium"><?php echo !empty($data['influencers']) ? $data['influencers'] : '-'; ?></td>
-                                <td class="text-start"><?php echo $data['judul_berita']; ?></td>
+                                <td class="text-center" style="font-size:0.85rem;"><?php echo date('d M Y', strtotime($data['tanggal'])); ?></td>
+                                <td class="text-center text-muted fw-medium"><?php echo !empty($data['influencers']) ? htmlspecialchars($data['influencers']) : '-'; ?></td>
+                                <td class="text-start"><?php echo htmlspecialchars($data['judul_berita']); ?></td>
+                                <td class="text-center">
+                                    <?php if ($jenis_row == 'cetak'): ?>
+                                        <span class="badge-cetak"><i class="bi bi-newspaper me-1"></i>Cetak</span>
+                                    <?php else: ?>
+                                        <span class="badge-online"><i class="bi bi-globe2 me-1"></i>Online</span>
+                                    <?php endif; ?>
+                                </td>
+                                <?php if($filter_jenis == 'cetak'): ?>
+                                <td class="text-center text-muted" style="font-size:0.85rem;"><?php echo !empty($data['halaman']) ? htmlspecialchars($data['halaman']) : '-'; ?></td>
+                                <td class="text-center text-muted" style="font-size:0.85rem;"><?php echo !empty($data['bulan_cetak']) ? htmlspecialchars($data['bulan_cetak']) : '-'; ?></td>
+                                <?php endif; ?>
                                 <td class="text-center">
                                     <?php 
                                     $warna = "bg-secondary"; 
-                                    if($data['tone'] == 'Positive') $warna = "bg-primary"; 
-                                    if($data['tone'] == 'Negative') $warna = "bg-danger"; 
+                                    if ($data['tone'] == 'Positive') $warna = "bg-primary"; 
+                                    if ($data['tone'] == 'Negative') $warna = "bg-danger"; 
                                     ?>
                                     <span class="badge <?php echo $warna; ?> rounded-pill px-3"><?php echo $data['tone']; ?></span>
                                 </td>
@@ -132,71 +157,97 @@ $no = $halaman_awal + 1;
                                     </div>
                                 </td>
                             </tr>
-                            <?php } 
-                        } else { ?>
-                            <tr><td colspan="6" class="text-center py-4 text-muted fw-bold">Yah, data tidak ditemukan.</td></tr>
-                        <?php } ?>
+                        <?php endwhile; else: ?>
+                            <tr><td colspan="9" class="text-center py-4 text-muted fw-bold">Yah, data tidak ditemukan.</td></tr>
+                        <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
 
-                <?php if($total_halaman > 1) { ?>
+                <?php if ($total_halaman > 1): ?>
                 <div class="card-footer bg-white p-3 d-flex justify-content-between align-items-center border-0">
                     <span class="small text-muted fw-bold">Halaman <?php echo $halaman; ?> dari <?php echo $total_halaman; ?></span>
                     <nav>
                         <ul class="pagination pagination-sm mb-0 shadow-sm">
-                            <li class="page-item <?php if($halaman <= 1) { echo 'disabled'; } ?>">
-                                <a class="page-link text-primary" href="?halaman=<?php echo $halaman - 1; ?><?php if($cari != '') echo '&cari='.$cari; ?>">Prev</a>
+                            <li class="page-item <?php if($halaman <= 1) echo 'disabled'; ?>">
+                                <a class="page-link text-primary" href="?halaman=<?php echo $halaman-1; ?><?php echo $cari ? '&cari='.$cari : ''; ?><?php echo $filter_jenis ? '&jenis='.$filter_jenis : ''; ?>">Prev</a>
                             </li>
-                            
                             <?php 
-                            // Tampilkan maksimal 5 kotak angka biar nggak kepanjangan
                             $start_page = max(1, $halaman - 2);
-                            $end_page = min($total_halaman, $halaman + 2);
-
-                            for($x = $start_page; $x <= $end_page; $x++) {
-                                $active = ($x == $halaman) ? 'active bg-primary border-primary' : '';
+                            $end_page   = min($total_halaman, $halaman + 2);
+                            for ($x = $start_page; $x <= $end_page; $x++):
+                                $active     = ($x == $halaman) ? 'active bg-primary border-primary' : '';
                                 $text_color = ($x == $halaman) ? 'text-white' : 'text-primary';
                             ?>
                                 <li class="page-item <?php echo $active; ?>">
-                                    <a class="page-link <?php echo $text_color; ?>" href="?halaman=<?php echo $x; ?><?php if($cari != '') echo '&cari='.$cari; ?>"><?php echo $x; ?></a>
+                                    <a class="page-link <?php echo $text_color; ?>" href="?halaman=<?php echo $x; ?><?php echo $cari ? '&cari='.$cari : ''; ?><?php echo $filter_jenis ? '&jenis='.$filter_jenis : ''; ?>"><?php echo $x; ?></a>
                                 </li>
-                            <?php } ?>
-
-                            <li class="page-item <?php if($halaman >= $total_halaman) { echo 'disabled'; } ?>">
-                                <a class="page-link text-primary" href="?halaman=<?php echo $halaman + 1; ?><?php if($cari != '') echo '&cari='.$cari; ?>">Next</a>
+                            <?php endfor; ?>
+                            <li class="page-item <?php if($halaman >= $total_halaman) echo 'disabled'; ?>">
+                                <a class="page-link text-primary" href="?halaman=<?php echo $halaman+1; ?><?php echo $cari ? '&cari='.$cari : ''; ?><?php echo $filter_jenis ? '&jenis='.$filter_jenis : ''; ?>">Next</a>
                             </li>
                         </ul>
                     </nav>
                 </div>
-                <?php } ?>
-
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
+<!-- MODAL TAMBAH LAPORAN -->
 <div class="modal fade" id="modalTambah" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content" style="border-radius: 16px;">
       <div class="modal-header">
         <h5 class="modal-title fw-bold">Input Laporan Baru</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form action="simpan_laporan.php" method="POST">
           <div class="modal-body">
-                <div class="mb-3"><label class="form-label small fw-bold">Nama Staf (Influencer)</label><input type="text" name="influencers" class="form-control" required></div>
-                <div class="mb-3"><label class="form-label small fw-bold">Judul Laporan Berita</label><textarea name="judul_berita" class="form-control" rows="3" required></textarea></div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Tone / Status</label>
-                    <select name="tone" class="form-select">
-                        <option value="Positive">Positive</option><option value="Negative">Negative</option><option value="Neutral">Neutral</option>
-                    </select>
-                </div>
+              <div class="mb-3">
+                  <label class="form-label small fw-bold">Nama Staf (Influencer)</label>
+                  <input type="text" name="influencers" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label small fw-bold">Judul Laporan Berita</label>
+                  <textarea name="judul_berita" class="form-control" rows="3" required></textarea>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label small fw-bold">Jenis Media</label>
+                  <select name="jenis_media" class="form-select" onchange="toggleCetakModal(this.value)">
+                      <option value="online">🌐 Online</option>
+                      <option value="cetak">📰 Cetak</option>
+                  </select>
+              </div>
+              <!-- Field khusus cetak -->
+              <div class="section-cetak" id="section-cetak-modal">
+                  <div class="mb-3">
+                      <label class="form-label small fw-bold">Halaman</label>
+                      <input type="text" name="halaman" class="form-control" placeholder="Contoh: 1, 5, 12">
+                  </div>
+                  <div class="mb-3">
+                      <label class="form-label small fw-bold">Bulan Terbit</label>
+                      <select name="bulan_cetak" class="form-select">
+                          <?php
+                          $bulan_list = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+                          foreach ($bulan_list as $b) echo "<option value='$b'>$b</option>";
+                          ?>
+                      </select>
+                  </div>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label small fw-bold">Tone / Status</label>
+                  <select name="tone" class="form-select">
+                      <option value="Positive">Positive</option>
+                      <option value="Negative">Negative</option>
+                      <option value="Neutral">Neutral</option>
+                  </select>
+              </div>
           </div>
           <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-primary px-4">Simpan Laporan</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-primary px-4">Simpan Laporan</button>
           </div>
       </form>
     </div>
@@ -204,5 +255,12 @@ $no = $halaman_awal + 1;
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleCetakModal(val) {
+    const section = document.getElementById('section-cetak-modal');
+    if (val === 'cetak') section.classList.add('show');
+    else section.classList.remove('show');
+}
+</script>
 </body>
 </html>

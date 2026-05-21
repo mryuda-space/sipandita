@@ -1,29 +1,23 @@
 <?php
-// 1. Nyalakan detektor error
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-
-// 2. Panggil koneksi
 include 'koneksi.php';
 
-// 3. Ambil data dari form modal (Nama disesuaikan dengan input di modal)
-$influencers = $_POST['influencers'];
-$judul       = $_POST['judul_berita'];
-$tone        = $_POST['tone'];
-$tgl         = date('Y-m-d'); // Otomatis tanggal hari ini
+$influencers  = mysqli_real_escape_string($koneksi, $_POST['influencers']);
+$judul        = mysqli_real_escape_string($koneksi, $_POST['judul_berita']);
+$tone         = mysqli_real_escape_string($koneksi, $_POST['tone']);
+$jenis_media  = isset($_POST['jenis_media']) ? mysqli_real_escape_string($koneksi, $_POST['jenis_media']) : 'online';
+$halaman      = isset($_POST['halaman'])     ? mysqli_real_escape_string($koneksi, $_POST['halaman'])     : '';
+$bulan_cetak  = isset($_POST['bulan_cetak']) ? mysqli_real_escape_string($koneksi, $_POST['bulan_cetak']) : '';
+$tgl          = date('Y-m-d');
 
-// 4. Perintah masukkan ke database (Nama kolom disesuaikan dengan phpMyAdmin)
-$query = "INSERT INTO laporan (tanggal, influencers, judul_berita, tone) 
-          VALUES ('$tgl', '$influencers', '$judul', '$tone')";
+$query = "INSERT INTO laporan (tanggal, influencers, judul_berita, tone, jenis_media, halaman, bulan_cetak) 
+          VALUES ('$tgl', '$influencers', '$judul', '$tone', '$jenis_media', '$halaman', '$bulan_cetak')";
 
-// 5. Eksekusi dan pindah halaman
 if (mysqli_query($koneksi, $query)) {
-    // Kalau berhasil, otomatis kembali ke halaman laporan
     header("Location: laporan_staf.php?pesan=berhasil");
-    exit(); // Ini penangkal biar data nggak dobel kalau halamannya nggak sengaja ke-refresh
+    exit();
 } else {
-    // Kalau gagal, tampilkan error aslinya dari database
-    echo "GAGAL MENYIMPAN DATA! Error dari database: <br>";
-    echo mysqli_error($koneksi);
+    echo "GAGAL MENYIMPAN DATA! Error: " . mysqli_error($koneksi);
 }
 ?>
